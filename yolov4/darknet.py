@@ -312,10 +312,10 @@ class Detector:
             results.append(DarkNetPredictionResult(
                 class_name=class_name,
                 class_confidence=class_confidence,
-                left_x=int(x_min),
-                top_y=int(y_min),
-                width=int(round(w)),
-                height=int(round(h))
+                left_x=max(0, int(x_min)),
+                top_y=max(0, int(y_min)),
+                width=max(0, int(round(w))),
+                height=max(0, int(round(h)))
             ))
         self.lock.release()
         return results
