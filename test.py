@@ -20,15 +20,15 @@ def target(g, desc):
 
 
 def main_single():
-    d = Detector(gpu_id=0)
+    d = Detector(gpu_id=0, lib_darknet_path='lib/libdarknet.so')
     for _ in tqdm(range(900)):
         d.perform_detect(show_image=False)
 
 
 def main():
     g = MultiGPU([
-        Detector(gpu_id=0),
-        Detector(gpu_id=1)
+        Detector(gpu_id=0, lib_darknet_path='lib/libdarknet.so'),
+        Detector(gpu_id=1, lib_darknet_path='lib/libdarknet.so')
     ])
 
     thread1 = Thread(target=target, args=(g, 't1'))
@@ -42,4 +42,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main_single()

@@ -13,15 +13,17 @@ class Detector:
 
     def __init__(
             self,
-            config_path='../cfg/yolov4.cfg',
-            weights_path='../yolov4.weights',
-            meta_path='../cfg/coco.data',
+            config_path='cfg/yolov4.cfg',
+            weights_path='yolov4.weights',
+            meta_path='cfg/coco.data',
+            lib_darknet_path='libdarknet.so',
             gpu_id=None
     ):
         """
         :param config_path: Path to the configuration file. Raises ValueError if not found.
         :param weights_path: Path to the weights file. Raises ValueError if not found.
         :param meta_path: Path to the data file. Raises ValueError if not found.
+        :param lib_darknet_path: Path to the darknet library (.so in linux).
         :param gpu_id: GPU on which to perform the inference.
         """
         self.config_path = config_path
@@ -35,7 +37,7 @@ class Detector:
         self.meta_main = None
         self.alt_names = None
 
-        self.lib, self.has_gpu = init_lib()
+        self.lib, self.has_gpu = init_lib(lib_darknet_path)
 
         self.predict = self.lib.network_predict_ptr
         self.predict.argtypes = [c_void_p, POINTER(c_float)]
@@ -232,7 +234,7 @@ class Detector:
 
     def perform_detect(
             self,
-            image_path='../data/dog.jpg',
+            image_path='data/dog.jpg',
             thresh=0.25,
             show_image=True,
             make_image_only=False,

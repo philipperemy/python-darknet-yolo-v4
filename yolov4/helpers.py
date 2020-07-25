@@ -74,7 +74,7 @@ def array_to_image(arr):
     return im, arr
 
 
-def init_lib():
+def init_lib(lib_darknet_path):
     # lib = CDLL("/home/pjreddie/documents/darknet/libdarknet.so", RTLD_GLOBAL)
     # lib = CDLL("libdarknet.so", RTLD_GLOBAL)
     hasGPU = True
@@ -121,7 +121,7 @@ def init_lib():
                 print(
                     "Environment variables indicated a CPU run, but we didn't find `" + winNoGPUdll + "`. Trying a GPU run anyway.")
     else:
-        lib = CDLL(Path("../lib/libdarknet.so").resolve(), RTLD_GLOBAL)
+        lib = CDLL(Path(lib_darknet_path).resolve(), RTLD_GLOBAL)
 
     lib.network_width.argtypes = [c_void_p]
     lib.network_width.restype = c_int
