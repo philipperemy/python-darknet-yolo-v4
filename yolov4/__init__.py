@@ -1,0 +1,1 @@
+from yolov4.darknet import Detector, MultiGPU
