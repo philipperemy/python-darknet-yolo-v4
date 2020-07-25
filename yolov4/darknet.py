@@ -307,15 +307,15 @@ class Detector:
         for detection in sub_detections:
             class_name, class_confidence, bbox = detection
             x, y, w, h = bbox
-            x_min = int(round(x - (w / 2)))
-            y_min = int(round(y - (h / 2)))
+            x_min = int(x - (w / 2))
+            y_min = int(y - (h / 2))
             results.append(DarkNetPredictionResult(
                 class_name=class_name,
                 class_confidence=class_confidence,
                 left_x=max(0, int(x_min)),
                 top_y=max(0, int(y_min)),
-                width=max(0, int(round(w))),
-                height=max(0, int(round(h)))
+                width=max(0, int(w)),
+                height=max(0, int(h))
             ))
         self.lock.release()
         return results
