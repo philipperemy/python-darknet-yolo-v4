@@ -337,7 +337,9 @@ class MultiGPU:
         self.num_gpus = len(self.detectors)
         self.thread_pool = ThreadPoolExecutor(max_workers=self.num_gpus, thread_name_prefix='detector_')
         self.counter = 0  # used to dispatch, assuming the load is same on each GPU.
-        self.locks = dict(zip(self.detectors.keys(), [Lock()] * self.num_gpus))
+        self.locks = {}
+        for gpu_id in self.detectors.keys():
+            self.locks[gpu_id] = Lock()
 
     def find_available_gpu(self):
         list_to_choose_from = []
@@ -353,7 +355,10 @@ class MultiGPU:
 
     def perform_detect(self, *args, **kwargs):
         gpu_id = self.find_available_gpu()
-        with self.locks[gpu_id]:
+        lock = self.locks[gpu_id]
+        with lock:
+            # print(f'Lock for GPU {gpu_id} acquired.')
+
             def run(*arg, **kwarg):
                 return self.detectors[gpu_id].perform_detect(*arg, **kwarg)
 
@@ -368,10 +373,12 @@ print(time())
 def target(g, desc):
     global c
     for _ in range(1000):
+        # print(desc)
         g.perform_detect(show_image=False)
-        c += 1
         if c % 100 == 0:
             print(time(), c)
+        c += 1
+    print(time(), c)
 
 
 def main_single():
@@ -397,4 +404,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main_single()
+    main()
