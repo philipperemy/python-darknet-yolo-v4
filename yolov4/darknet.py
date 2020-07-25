@@ -17,9 +17,9 @@ class Detector:
 
     def __init__(
             self,
-            config_path="../cfg/yolov4.cfg",
-            weights_path="../yolov4.weights",
-            meta_path="../cfg/coco.data",
+            config_path='../cfg/yolov4.cfg',
+            weights_path='../yolov4.weights',
+            meta_path='../cfg/coco.data',
             gpu_id=None
     ):
         """
@@ -127,17 +127,17 @@ class Detector:
         self.network_predict_batch.restype = POINTER(DETNUMPAIR)
 
         if not Path(self.config_path).exists():
-            raise ValueError("Invalid config path `" + os.path.abspath(self.config_path) + "`")
+            raise ValueError('Invalid config path `' + os.path.abspath(self.config_path) + '`')
         if not Path(self.weights_path).exists():
-            raise ValueError("Invalid weight path `" + os.path.abspath(self.weights_path) + "`")
+            raise ValueError('Invalid weight path `' + os.path.abspath(self.weights_path) + '`')
         if not Path(meta_path).exists():
-            raise ValueError("Invalid data file path `" + os.path.abspath(self.meta_path) + "`")
+            raise ValueError('Invalid data file path `' + os.path.abspath(self.meta_path) + '`')
         if self.gpu_id is not None:
             print(f'GPU -> {self.gpu_id}.')
             self.set_gpu(self.gpu_id)
         # batch size = 1
-        self.net_main = self.load_net_custom(self.config_path.encode("ascii"), self.weights_path.encode("ascii"), 0, 1)
-        self.meta_main = self.load_meta(self.meta_path.encode("ascii"))
+        self.net_main = self.load_net_custom(self.config_path.encode('ascii'), self.weights_path.encode('ascii'), 0, 1)
+        self.meta_main = self.load_meta(self.meta_path.encode('ascii'))
         # In Python 3, the metafile default access craps out on Windows (but not Linux)
         # Read the names file and create a list to feed to detect
         self.alt_names = read_alt_names(self.meta_path)
@@ -170,48 +170,48 @@ class Detector:
         # pylint: disable= C0321
         im = self.load_image(image, 0, 0)
         if debug:
-            print("Loaded image")
+            print('Loaded image')
         ret = self.detect_image(im, thresh, hier_thresh, nms, debug)
         self.free_image(im)
         if debug:
-            print("freed image")
+            print('freed image')
         return ret
 
     def detect_image(self, im, thresh=.5, hier_thresh=.5, nms=.45, debug=False):
         net, meta = self.net_main, self.meta_main
         num = c_int(0)
         if debug:
-            print("Assigned num")
+            print('Assigned num')
         pnum = pointer(num)
         if debug:
-            print("Assigned pnum")
+            print('Assigned pnum')
         self.predict_image(net, im)
         letter_box = 0
         # predict_image_letterbox(net, im)
         # letter_box = 1
         if debug:
-            print("did prediction")
+            print('did prediction')
         dets = self.get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum, letter_box)
         if debug:
-            print("Got dets")
+            print('Got dets')
         num = pnum[0]
         if debug:
-            print("got zeroth index of pnum")
+            print('got zeroth index of pnum')
         if nms:
             self.do_nms_sort(dets, num, meta.classes, nms)
         if debug:
-            print("did sort")
+            print('did sort')
         res = []
         if debug:
-            print("about to range")
+            print('about to range')
         for j in range(num):
             if debug:
-                print("Ranging on " + str(j) + " of " + str(num))
+                print('Ranging on ' + str(j) + ' of ' + str(num))
             if debug:
-                print("Classes: " + str(meta), meta.classes, meta.names)
+                print('Classes: ' + str(meta), meta.classes, meta.names)
             for i in range(meta.classes):
                 if debug:
-                    print("Class-ranging on " + str(i) + " of " + str(meta.classes) + "= " + str(dets[j].prob[i]))
+                    print('Class-ranging on ' + str(i) + ' of ' + str(meta.classes) + '= ' + str(dets[j].prob[i]))
                 if dets[j].prob[i] > 0:
                     b = dets[j].bbox
                     if self.alt_names is None:
@@ -219,46 +219,46 @@ class Detector:
                     else:
                         nameTag = self.alt_names[i]
                     if debug:
-                        print("Got bbox", b)
+                        print('Got bbox', b)
                         print(nameTag)
                         print(dets[j].prob[i])
                         print((b.x, b.y, b.w, b.h))
                     res.append((nameTag, dets[j].prob[i], (b.x, b.y, b.w, b.h)))
         if debug:
-            print("did range")
+            print('did range')
         res = sorted(res, key=lambda x: -x[1])
         if debug:
-            print("did sort")
+            print('did sort')
         self.free_detections(dets, num)
         if debug:
-            print("freed detections")
+            print('freed detections')
         return res
 
     def perform_detect(
             self,
-            image_path="../data/dog.jpg",
+            image_path='../data/dog.jpg',
             thresh=0.25,
             show_image=True,
             make_image_only=False,
     ):
         self.lock.acquire()
-        assert 0 < thresh < 1, "Threshold should be a float between zero and one (non-inclusive)"
+        assert 0 < thresh < 1, 'Threshold should be a float between zero and one (non-inclusive)'
         if not os.path.exists(image_path):
-            raise ValueError("Invalid image path `" + os.path.abspath(image_path) + "`")
+            raise ValueError('Invalid image path `' + os.path.abspath(image_path) + '`')
         # Do the detection
         # detections = detect(net_main, meta_main, image_path, thresh)	# if is used cv2.imread(image)
-        detections = self.detect(image_path.encode("ascii"), thresh)
+        detections = self.detect(image_path.encode('ascii'), thresh)
         if show_image:
             try:
                 from skimage import io, draw
                 import numpy as np
                 image = io.imread(image_path)
-                print("*** " + str(len(detections)) + " Results, color coded by confidence ***")
+                print('*** ' + str(len(detections)) + ' Results, color coded by confidence ***')
                 imcaption = []
                 for detection in detections:
                     label = detection[0]
                     confidence = detection[1]
-                    pstring = label + ": " + str(np.rint(100 * confidence)) + "%"
+                    pstring = label + ': ' + str(np.rint(100 * confidence)) + '%'
                     imcaption.append(pstring)
                     print(pstring)
                     bounds = detection[2]
@@ -299,12 +299,12 @@ class Detector:
                     io.imshow(image)
                     io.show()
                 detections = {
-                    "detections": detections,
-                    "image": image,
-                    "caption": "\n<br/>".join(imcaption)
+                    'detections': detections,
+                    'image': image,
+                    'caption': '\n<br/>'.join(imcaption)
                 }
             except Exception as e:
-                print("Unable to show image: " + str(e))
+                print('Unable to show image: ' + str(e))
 
         results = []
         sub_detections = detections['detections'] if 'detections' in detections else detections
