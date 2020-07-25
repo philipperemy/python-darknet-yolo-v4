@@ -1,6 +1,11 @@
 import os
+import random
+from concurrent.futures.thread import ThreadPoolExecutor
 from ctypes import *
 from pathlib import Path
+from threading import Thread, Lock
+from time import time
+from typing import List
 
 from tqdm import tqdm
 
@@ -15,15 +20,20 @@ class Detector:
             config_path="../cfg/yolov4.cfg",
             weights_path="../yolov4.weights",
             meta_path="../cfg/coco.data",
+            gpu_id=None
     ):
         """
         :param config_path: Path to the configuration file. Raises ValueError if not found.
         :param weights_path: Path to the weights file. Raises ValueError if not found.
         :param meta_path: Path to the data file. Raises ValueError if not found.
+        :param gpu_id: GPU on which to perform the inference.
         """
         self.config_path = config_path
         self.weights_path = weights_path
         self.meta_path = meta_path
+        self.gpu_id = gpu_id
+        # to make sure we have only one inference per GPU.
+        self.lock = Lock()
 
         self.net_main = None
         self.meta_main = None
@@ -122,6 +132,9 @@ class Detector:
             raise ValueError("Invalid weight path `" + os.path.abspath(self.weights_path) + "`")
         if not Path(meta_path).exists():
             raise ValueError("Invalid data file path `" + os.path.abspath(self.meta_path) + "`")
+        if self.gpu_id is not None:
+            print(f'GPU -> {self.gpu_id}.')
+            self.set_gpu(self.gpu_id)
         # batch size = 1
         self.net_main = self.load_net_custom(self.config_path.encode("ascii"), self.weights_path.encode("ascii"), 0, 1)
         self.meta_main = self.load_meta(self.meta_path.encode("ascii"))
@@ -228,31 +241,7 @@ class Detector:
             show_image=True,
             make_image_only=False,
     ):
-        """
-        Convenience function to handle the detection and returns of objects.
-        Displaying bounding boxes requires libraries scikit-image and numpy
-        Parameters
-        ----------------
-        image_path: str
-            Path to the image to evaluate. Raises ValueError if not found
-        thresh: float (default= 0.25)
-            The detection threshold
-        show_image: bool (default= True)
-            Compute (and show) bounding boxes. Changes return.
-        make_image_only: bool (default= False)
-            If show_image is True, this won't actually *show* the image, but will create the array and return it.
-        Returns
-        ----------------------
-        When show_image is False, list of tuples like
-            ('obj_label', confidence, (bounding_box_x_px, bounding_box_y_px, bounding_box_width_px, bounding_box_height_px))
-            The X and Y coordinates are from the center of the bounding box. Subtract half the width or height to get the lower corner.
-        Otherwise, a dict with
-            {
-                "detections": as above
-                "image": a numpy array representing an image, compatible with scikit-image
-                "caption": an image caption
-            }
-        """
+        self.lock.acquire()
         assert 0 < thresh < 1, "Threshold should be a float between zero and one (non-inclusive)"
         if not os.path.exists(image_path):
             raise ValueError("Invalid image path `" + os.path.abspath(image_path) + "`")
@@ -332,14 +321,80 @@ class Detector:
                 width=int(round(w)),
                 height=int(round(h))
             ))
+        self.lock.release()
         return results
 
 
-def main():
-    d = Detector()
-    for _ in tqdm(range(1000)):
+class MultiGPU:
+
+    def __init__(self, detectors_list: List[Detector]):
+        self.detectors = {}
+        for detector in detectors_list:
+            gpu_id = detector.gpu_id
+            if gpu_id is None:
+                raise ValueError('To use MultiGPU, every gpu_id should be defined.')
+            self.detectors[gpu_id] = detector
+        self.num_gpus = len(self.detectors)
+        self.thread_pool = ThreadPoolExecutor(max_workers=self.num_gpus, thread_name_prefix='detector_')
+        self.counter = 0  # used to dispatch, assuming the load is same on each GPU.
+        self.locks = dict(zip(self.detectors.keys(), [Lock()] * self.num_gpus))
+
+    def find_available_gpu(self):
+        list_to_choose_from = []
+        for gpu_id, lock in self.locks.items():
+            if not lock.locked():
+                list_to_choose_from.append(gpu_id)
+        if len(list_to_choose_from) == 0:
+            list_to_choose_from = list(self.locks.keys())
+        return random.choice(list_to_choose_from)
+
+    def _perform_detect(self, gpu_id, *args):
+        return self.detectors[gpu_id].perform_detect(*args)
+
+    def perform_detect(self, *args, **kwargs):
+        gpu_id = self.find_available_gpu()
+        with self.locks[gpu_id]:
+            def run(*arg, **kwarg):
+                return self.detectors[gpu_id].perform_detect(*arg, **kwarg)
+
+            future = self.thread_pool.submit(fn=run, *args, **kwargs)
+            return future.result()
+
+
+c = 0
+print(time())
+
+
+def target(g, desc):
+    global c
+    for _ in range(1000):
+        g.perform_detect(show_image=False)
+        c += 1
+        if c % 100 == 0:
+            print(time(), c)
+
+
+def main_single():
+    d = Detector(gpu_id=0)
+    for _ in tqdm(range(900)):
         d.perform_detect(show_image=False)
 
 
+def main():
+    g = MultiGPU([
+        Detector(gpu_id=0),
+        Detector(gpu_id=1)
+    ])
+
+    thread1 = Thread(target=target, args=(g, 't1'))
+    thread2 = Thread(target=target, args=(g, 't2'))
+
+    thread1.start()
+    thread2.start()
+
+    thread1.join()
+    thread2.join()
+
+
 if __name__ == '__main__':
-    main()
+    main_single()
