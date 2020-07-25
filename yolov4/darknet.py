@@ -3,14 +3,10 @@ import random
 from concurrent.futures.thread import ThreadPoolExecutor
 from ctypes import *
 from pathlib import Path
-from threading import Thread, Lock
-from time import time
+from threading import Lock
 from typing import List
 
-from tqdm import tqdm
-
-from yolov4.api import DarkNetPredictionResult
-from yolov4.helpers import init_lib, DETECTION, DETNUMPAIR, METADATA, IMAGE, read_alt_names
+from yolov4.helpers import init_lib, DETECTION, DETNUMPAIR, METADATA, IMAGE, read_alt_names, DarkNetPredictionResult
 
 
 class Detector:
@@ -364,4 +360,3 @@ class MultiGPU:
 
             future = self.thread_pool.submit(fn=run, *args, **kwargs)
             return future.result()
-
