@@ -1,6 +1,8 @@
 from threading import Thread
 from time import time
 
+import numpy as np
+from PIL import Image
 from tqdm import tqdm
 
 from yolov4 import Detector, MultiGPU
@@ -20,9 +22,11 @@ def target(g, desc):
 
 
 def main_single():
+    img = Image.open('data/dog.jpg')
     d = Detector(gpu_id=0, lib_darknet_path='lib/libdarknet.so')
+    img_arr = np.array(img.resize((d.network_width(), d.network_height())))
     for _ in tqdm(range(900)):
-        d.perform_detect(show_image=False)
+        d.perform_detect(image_path_or_buf=img_arr, show_image=False)
 
 
 def main():

@@ -115,6 +115,9 @@ class Detector:
         self.predict_image.argtypes = [c_void_p, IMAGE]
         self.predict_image.restype = POINTER(c_float)
 
+        self.copy_image_from_bytes = self.lib.copy_image_from_bytes
+        self.copy_image_from_bytes.argtypes = [IMAGE, c_char_p]
+
         self.predict_image_letterbox = self.lib.network_predict_image_letterbox
         self.predict_image_letterbox.argtypes = [c_void_p, IMAGE]
         self.predict_image_letterbox.restype = POINTER(c_float)
@@ -140,6 +143,8 @@ class Detector:
         # Read the names file and create a list to feed to detect
         self.alt_names = read_alt_names(self.meta_path)
 
+        self.darknet_image = self.make_image(self.network_width(), self.network_height(), 3)
+
     def network_width(self):
         net = self.net_main
         return self.lib.network_width(net)
@@ -162,17 +167,27 @@ class Detector:
         return res
 
     def detect(self, image, thresh=.5, hier_thresh=.5, nms=.45, debug=False):
-        """
-        Performs the meat of the detection
-        """
-        # pylint: disable= C0321
-        im = self.load_image(image, 0, 0)
-        if debug:
-            print('Loaded image')
+        #
+        # custom_image_bgr = cv2.imread(image.decode('utf8'))  # use: detect(,,imagePath,)
+        # custom_image = cv2.cvtColor(custom_image_bgr, cv2.COLOR_BGR2RGB)
+        # custom_image = cv2.resize(custom_image, (self.network_width(), self.network_height()),
+        #                           interpolation=cv2.INTER_LINEAR)
+        # img = Image.open(image.decode('utf8'))
+        # custom_image2 = np.array(img.resize((self.network_width(), self.network_height())))
+        # self.copy_image_from_bytes(self.darknet_image, custom_image2.tobytes())
+        # im2 = self.load_image(image, 0, 0)
+        if isinstance(image, str):
+            if not os.path.exists(image):
+                raise ValueError('Invalid image path `' + os.path.abspath(image) + '`')
+            image = image.encode('ascii')
+            im = self.load_image(image, 0, 0)
+        else:
+            self.copy_image_from_bytes(self.darknet_image, image.tobytes())
+            im = self.darknet_image
+
         ret = self.detect_image(im, thresh, hier_thresh, nms, debug)
-        self.free_image(im)
-        if debug:
-            print('freed image')
+        if isinstance(image, str):
+            self.free_image(im)  # just when we load a new image.
         return ret
 
     def detect_image(self, im, thresh=.5, hier_thresh=.5, nms=.45, debug=False):
@@ -234,23 +249,19 @@ class Detector:
 
     def perform_detect(
             self,
-            image_path='data/dog.jpg',
-            thresh=0.25,
-            show_image=True,
-            make_image_only=False,
+            image_path_or_buf='data/dog.jpg',
+            thresh: float = 0.25,
+            show_image: bool = True,
+            make_image_only: bool = False,
     ):
         self.lock.acquire()
         assert 0 < thresh < 1, 'Threshold should be a float between zero and one (non-inclusive)'
-        if not os.path.exists(image_path):
-            raise ValueError('Invalid image path `' + os.path.abspath(image_path) + '`')
-        # Do the detection
-        # detections = detect(net_main, meta_main, image_path, thresh)	# if is used cv2.imread(image)
-        detections = self.detect(image_path.encode('ascii'), thresh)
-        if show_image:
+        detections = self.detect(image_path_or_buf, thresh)
+        if show_image and isinstance(image_path_or_buf, str):
             try:
                 from skimage import io, draw
                 import numpy as np
-                image = io.imread(image_path)
+                image = io.imread(image_path_or_buf)
                 print('*** ' + str(len(detections)) + ' Results, color coded by confidence ***')
                 imcaption = []
                 for detection in detections:
