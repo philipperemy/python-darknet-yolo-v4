@@ -6,6 +6,8 @@ from pathlib import Path
 from threading import Lock
 from typing import List
 
+import numpy as np
+
 from yolov4.helpers import init_lib, DETECTION, DETNUMPAIR, METADATA, IMAGE, read_alt_names, DarkNetPredictionResult
 
 
@@ -17,6 +19,7 @@ class Detector:
             weights_path='yolov4.weights',
             meta_path='cfg/coco.data',
             lib_darknet_path='libdarknet.so',
+            batch_size=1,
             gpu_id=None
     ):
         """
@@ -137,7 +140,8 @@ class Detector:
             print(f'GPU -> {self.gpu_id}.')
             self.set_gpu(self.gpu_id)
         # batch size = 1
-        self.net_main = self.load_net_custom(self.config_path.encode('ascii'), self.weights_path.encode('ascii'), 0, 1)
+        self.net_main = self.load_net_custom(self.config_path.encode('ascii'), self.weights_path.encode('ascii'),
+                                             0, batch_size)
         self.meta_main = self.load_meta(self.meta_path.encode('ascii'))
         # In Python 3, the metafile default access craps out on Windows (but not Linux)
         # Read the names file and create a list to feed to detect
@@ -260,7 +264,6 @@ class Detector:
         if show_image and isinstance(image_path_or_buf, str):
             try:
                 from skimage import io, draw
-                import numpy as np
                 image = io.imread(image_path_or_buf)
                 print('*** ' + str(len(detections)) + ' Results, color coded by confidence ***')
                 imcaption = []
@@ -332,6 +335,58 @@ class Detector:
             ))
         self.lock.release()
         return results
+
+    def perform_batch_detect(self, image_list, thresh=0.25, hier_thresh=.5, nms=.45, batch_size=3):
+        net, meta = self.net_main, self.meta_main
+        # NB! Image sizes should be the same
+        # You can change the images, yet, be sure that they have the same width and height
+        pred_height, pred_width, c = image_list[0].shape
+        net_width, net_height = (self.network_width(), self.network_height())
+        arr = np.concatenate(image_list, axis=0)
+        arr = np.ascontiguousarray(arr.flat, dtype=np.float32) / 255.0
+        data = arr.ctypes.data_as(POINTER(c_float))
+        im = IMAGE(net_width, net_height, c, data)
+
+        batch_dets = self.network_predict_batch(net, im, batch_size, pred_width,
+                                                pred_height, thresh, hier_thresh, None, 0, 0)
+        batch_boxes = []
+        batch_scores = []
+        batch_classes = []
+        for b in range(batch_size):
+            num = batch_dets[b].num
+            dets = batch_dets[b].dets
+            if nms:
+                self.do_nms_obj(dets, num, meta.classes, nms)
+            boxes = []
+            scores = []
+            classes = []
+            for i in range(num):
+                det = dets[i]
+                score = -1
+                label = None
+                for c in range(det.classes):
+                    p = det.prob[c]
+                    if p > score:
+                        score = p
+                        label = c
+                if score > thresh:
+                    box = det.bbox
+                    left, top, right, bottom = map(int, (box.x - box.w / 2, box.y - box.h / 2,
+                                                         box.x + box.w / 2, box.y + box.h / 2))
+                    boxes.append((top, left, bottom, right))
+                    scores.append(score)
+                    classes.append(label)
+                    # boxColor = (int(255 * (1 - (score ** 2))), int(255 * (score ** 2)), 0)
+                    # cv2.rectangle(image_list[b], (left, top),
+                    #               (right, bottom), boxColor, 2)
+            # cv2.imwrite(os.path.basename(img_samples[b]), image_list[b])
+
+            batch_boxes.append(boxes)
+            batch_scores.append(scores)
+            batch_classes.append(classes)
+        self.free_batch_detections(batch_dets, batch_size)
+        # batch_classes: use altNames to fetch the real names.
+        return batch_boxes, batch_scores, batch_classes
 
 
 class MultiGPU:

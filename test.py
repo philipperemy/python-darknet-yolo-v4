@@ -1,6 +1,7 @@
 from threading import Thread
 from time import time
 
+import cv2
 import numpy as np
 from PIL import Image
 from tqdm import tqdm
@@ -19,6 +20,23 @@ def target(g, desc):
             print(time(), c)
         c += 1
     print(time(), c)
+
+
+def batch_single():
+    img_samples = ['data/person.jpg', 'data/dog.jpg', 'data/person.jpg',
+                   'data/person.jpg', 'data/dog.jpg', 'data/person.jpg']
+    bs = len(img_samples)
+    image_list = [cv2.imread(k) for k in img_samples]
+    img_list = []
+    d = Detector(gpu_id=0, lib_darknet_path='lib/libdarknet.so', batch_size=bs)
+    for custom_image_bgr in image_list:
+        custom_image = cv2.cvtColor(custom_image_bgr, cv2.COLOR_BGR2RGB)
+        custom_image = cv2.resize(
+            custom_image, (d.network_width(), d.network_height()), interpolation=cv2.INTER_NEAREST)
+        custom_image = custom_image.transpose(2, 0, 1)
+        img_list.append(custom_image)
+    for _ in tqdm(range(900)):
+        d.perform_batch_detect(img_list, batch_size=bs)
 
 
 def main_single():
@@ -46,4 +64,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main_single()
+    batch_single()
