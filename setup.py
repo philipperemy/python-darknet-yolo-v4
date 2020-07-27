@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='yolo-v4',
-    version='0.4',
+    version='0.5',
     author='Philippe Remy',
     description='Interface Darknet YOLOv4 with python',
     include_package_data=True,
