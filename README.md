@@ -37,7 +37,7 @@ from PIL import Image
 from yolov4 import Detector
 
 img = Image.open('data/dog.jpg')
-d = Detector(gpu_id=0, lib_darknet_path='lib/libdarknet.so')
+d = Detector(gpu_id=0, lib_darknet_path='libdarknet.so')
 img_arr = np.array(img.resize((d.network_width(), d.network_height())))
 detections = d.perform_detect(image_path_or_buf=img_arr, show_image=False)
 for detection in detections:
