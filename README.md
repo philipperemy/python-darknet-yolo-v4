@@ -52,4 +52,8 @@ bicycle      | 92.0 % | (90, 134, 362, 315)
 pottedplant  | 34.1 % | (538, 115, 29, 47)
 ```
 
+<p align="center">
+  <img src="misc/sample1.png" width="500">
+</p>
+
 From there, it is easy to wrap it to serve requests.
