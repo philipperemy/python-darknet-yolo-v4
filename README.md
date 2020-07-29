@@ -2,12 +2,29 @@
 
 Using python to interface with Darknet Yolo V4
 
+### Compile darknet first
+
+On Linux.
+```
+sudo apt-get update 
+sudo apt-get install -y pkg-config git build-essential libopencv-dev wget cmake
+git clone https://github.com/AlexeyAB/darknet.git
+cd darknet
+make LIBSO=1 OPENCV=1 GPU=1 AVX=1 OPENMP=1 CUDNN=1 CUDNN_HALF=1 OPENMP=1 -j $(nproc)
+chmod +x darknet
+```
+
+`libdarknet.so` will be created.
+
+Download the weights by following the instructions here: https://github.com/AlexeyAB/darknet.
+
+From there, create a virtual environment with python3.6+ and run this command:
+
 ```
 pip install yolo-v4
 ```
 
-Compile the `darknet` framework https://github.com/AlexeyAB/darknet by setting `LIBSO=1` in the Makefile and do `make`.
-
+To run inference on the GPU on an image, run this script:
 
 ```python
 import numpy as np
@@ -30,3 +47,5 @@ truck        | 93.0 % | (367, 81, 175, 98)
 bicycle      | 92.0 % | (90, 134, 362, 315)
 pottedplant  | 34.1 % | (538, 115, 29, 47)
 ```
+
+From there, it is easy to wrap it to serve requests.
