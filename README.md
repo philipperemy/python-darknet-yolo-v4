@@ -20,9 +20,13 @@ Download the weights by following the instructions here: https://github.com/Alex
 
 From there, create a virtual environment with python3.6+ and run this command:
 
+### Installation
+
 ```
 pip install yolo-v4
 ```
+
+### Run inference on images
 
 To run inference on the GPU on an image, run this script:
 
