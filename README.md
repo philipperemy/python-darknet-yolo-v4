@@ -18,9 +18,9 @@ chmod +x darknet
 
 Download the weights by following the instructions here: https://github.com/AlexeyAB/darknet.
 
-From there, create a virtual environment with python3.6+ and run this command:
-
 ### Installation
+
+From there, create a virtual environment with python3.6+ and run this command:
 
 ```
 pip install yolo-v4
