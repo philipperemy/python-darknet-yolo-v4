@@ -1,6 +1,6 @@
 ## YOLOv4 in Python
 
-Using python to interface with Darknet Yolo V4
+Using python to interface with Darknet Yolo V4. Multi GPU is supported.
 
 ### Compile darknet first
 
