@@ -5,7 +5,7 @@ Using python to interface with Darknet Yolo V4. Multi GPU is supported.
 ### Compile darknet first
 
 On Linux.
-```
+```bash
 sudo apt-get update 
 sudo apt-get install -y pkg-config git build-essential libopencv-dev wget cmake
 git clone https://github.com/AlexeyAB/darknet.git
@@ -22,7 +22,7 @@ Download the weights by following the instructions here: https://github.com/Alex
 
 From there, create a virtual environment with python3.6+ and run this command:
 
-```
+```bash
 pip install yolo-v4
 ```
 
