@@ -1,10 +1,11 @@
 ## YOLOv4 in Python
 
-Using python to interface with Darknet Yolo V4. Multi GPU is supported (load balancer).
+Python interface to Darknet Yolo V4. The multi GPU is supported (load balancer).
 
-### Compile darknet first
+### Installation
 
-On Linux.
+Compile the Darknet framework first.
+
 ```bash
 sudo apt-get update 
 sudo apt-get install -y pkg-config git build-essential libopencv-dev wget cmake
@@ -14,11 +15,7 @@ make LIBSO=1 OPENCV=1 GPU=1 AVX=1 OPENMP=1 CUDNN=1 CUDNN_HALF=1 OPENMP=1 -j $(np
 chmod +x darknet
 ```
 
-`libdarknet.so` will be created.
-
-Download the weights by following the instructions here: https://github.com/AlexeyAB/darknet.
-
-### Installation
+Then, download the weights by following the instructions here: https://github.com/AlexeyAB/darknet.
 
 From there, create a virtual environment with python3.6+ and run this command:
 
@@ -28,7 +25,7 @@ pip install yolo-v4
 
 ### Run inference on images
 
-To run inference on the GPU on an image, run this script:
+To run inference on the GPU on an image `data/dog.jpg`, run this script:
 
 ```python
 import numpy as np
@@ -56,4 +53,3 @@ pottedplant  | 34.1 % | (538, 115, 29, 47)
   <img src="misc/sample1.png" width="500">
 </p>
 
-From there, it is easy to wrap it to serve requests.
