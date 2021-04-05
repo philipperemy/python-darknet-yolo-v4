@@ -273,7 +273,6 @@ class Detector:
                     confidence = detection[1]
                     pstring = label + ': ' + str(np.rint(100 * confidence)) + '%'
                     imcaption.append(pstring)
-                    print(pstring)
                     bounds = detection[2]
                     shape = image.shape
                     # x = shape[1]
