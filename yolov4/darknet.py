@@ -262,6 +262,8 @@ class Detector:
         self.lock.acquire()
         assert 0 < thresh < 1, 'Threshold should be a float between zero and one (non-inclusive)'
         detect_image = image_path_or_buf
+        if not isinstance(image_path_or_buf, str):
+            detect_image = np.array(image_path_or_buf)
         detections = self.detect(detect_image, thresh)
         if show_image or make_image_only:
             try:
@@ -270,7 +272,6 @@ class Detector:
                     image = io.imread(image_path_or_buf)
                 else:
                     image = detect_image
-                print('*** ' + str(len(detections)) + ' Results, color coded by confidence ***')
                 imcaption = []
                 for detection in detections:
                     label = detection[0]
