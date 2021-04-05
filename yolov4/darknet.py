@@ -256,12 +256,13 @@ class Detector:
             image_path_or_buf='data/dog.jpg',
             thresh: float = 0.25,
             show_image: bool = True,
+            return_image = (lambda x: x),
             make_image_only: bool = False,
     ):
         self.lock.acquire()
         assert 0 < thresh < 1, 'Threshold should be a float between zero and one (non-inclusive)'
         detections = self.detect(image_path_or_buf, thresh)
-        if show_image and isinstance(image_path_or_buf, str):
+        if (show_image or make_image_only) and isinstance(image_path_or_buf, str):
             try:
                 from skimage import io, draw
                 image = io.imread(image_path_or_buf)
@@ -310,17 +311,12 @@ class Detector:
                 if not make_image_only:
                     io.imshow(image)
                     io.show()
-                detections = {
-                    'detections': detections,
-                    'image': image,
-                    'caption': '\n<br/>'.join(imcaption)
-                }
+                return_image(image)
             except Exception as e:
                 print('Unable to show image: ' + str(e))
 
         results = []
-        sub_detections = detections['detections'] if 'detections' in detections else detections
-        for detection in sub_detections:
+        for detection in detections:
             class_name, class_confidence, bbox = detection
             x, y, w, h = bbox
             x_min = int(x - (w / 2))
