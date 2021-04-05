@@ -256,23 +256,28 @@ class Detector:
             image_path_or_buf='data/dog.jpg',
             thresh: float = 0.25,
             show_image: bool = True,
+            return_image = (lambda x: x),
             make_image_only: bool = False,
     ):
         self.lock.acquire()
         assert 0 < thresh < 1, 'Threshold should be a float between zero and one (non-inclusive)'
-        detections = self.detect(image_path_or_buf, thresh)
-        if show_image and isinstance(image_path_or_buf, str):
+        detect_image = image_path_or_buf
+        if not isinstance(image_path_or_buf, str):
+            detect_image = np.array(image_path_or_buf)
+        detections = self.detect(detect_image, thresh)
+        if show_image or make_image_only:
             try:
                 from skimage import io, draw
-                image = io.imread(image_path_or_buf)
-                print('*** ' + str(len(detections)) + ' Results, color coded by confidence ***')
+                if isinstance(image_path_or_buf, str):
+                    image = io.imread(image_path_or_buf)
+                else:
+                    image = detect_image
                 imcaption = []
                 for detection in detections:
                     label = detection[0]
                     confidence = detection[1]
                     pstring = label + ': ' + str(np.rint(100 * confidence)) + '%'
                     imcaption.append(pstring)
-                    print(pstring)
                     bounds = detection[2]
                     shape = image.shape
                     # x = shape[1]
@@ -307,20 +312,15 @@ class Detector:
                     draw.set_color(image, (rr3, cc3), boxColor, alpha=0.8)
                     draw.set_color(image, (rr4, cc4), boxColor, alpha=0.8)
                     draw.set_color(image, (rr5, cc5), boxColor, alpha=0.8)
-                if not make_image_only:
+                if show_image:
                     io.imshow(image)
                     io.show()
-                detections = {
-                    'detections': detections,
-                    'image': image,
-                    'caption': '\n<br/>'.join(imcaption)
-                }
+                return_image(image)
             except Exception as e:
                 print('Unable to show image: ' + str(e))
 
         results = []
-        sub_detections = detections['detections'] if 'detections' in detections else detections
-        for detection in sub_detections:
+        for detection in detections:
             class_name, class_confidence, bbox = detection
             x, y, w, h = bbox
             x_min = int(x - (w / 2))
