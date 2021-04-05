@@ -261,11 +261,17 @@ class Detector:
     ):
         self.lock.acquire()
         assert 0 < thresh < 1, 'Threshold should be a float between zero and one (non-inclusive)'
-        detections = self.detect(image_path_or_buf, thresh)
-        if (show_image or make_image_only) and isinstance(image_path_or_buf, str):
+        detect_image = image_path_or_buf
+        if not isinstance(image_path_or_buf, str):
+            detect_image = np.array(image_path_or_buf)
+        detections = self.detect(detect_image, thresh)
+        if show_image or make_image_only:
             try:
                 from skimage import io, draw
-                image = io.imread(image_path_or_buf)
+                if isinstance(image_path_or_buf, str):
+                    image = io.imread(image_path_or_buf)
+                else:
+                    image = image_path_or_buf
                 print('*** ' + str(len(detections)) + ' Results, color coded by confidence ***')
                 imcaption = []
                 for detection in detections:
@@ -307,7 +313,7 @@ class Detector:
                     draw.set_color(image, (rr3, cc3), boxColor, alpha=0.8)
                     draw.set_color(image, (rr4, cc4), boxColor, alpha=0.8)
                     draw.set_color(image, (rr5, cc5), boxColor, alpha=0.8)
-                if not make_image_only:
+                if show_image:
                     io.imshow(image)
                     io.show()
                 return_image(image)
